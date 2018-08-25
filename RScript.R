@@ -106,39 +106,17 @@ emp_in_out_times_df$work_duration <-
     )
   )
 
-emp_in_out_times_df$month <-
-  month(emp_in_out_times_df$Date, label = TRUE, abbr = TRUE)
+
 monthly_emp_average_workhour <-
-  aggregate(work_duration ~ EmployeeID + month,
+  aggregate(work_duration ~ EmployeeID,
             data = emp_in_out_times_df,
             mean)
 rm(emp_in_out_times_df)  # removing the temporarily created data
 
+View(monthly_emp_average_workhour)
 monthly_emp_average_workhour$work_duration <-
   signif(monthly_emp_average_workhour$work_duration, digits = 2)
-monthly_emp_average_workhour <-
-  reshape(
-    monthly_emp_average_workhour,
-    idvar = "EmployeeID",
-    timevar = "month",
-    direction = "wide"
-  )
-monthly_emp_average_workhour <-
-  rename(
-    monthly_emp_average_workhour,
-    Jan_avg_workhours = work_duration.Jan,
-    Feb_avg_workhours = work_duration.Feb,
-    Mar_avg_workhours = work_duration.Mar,
-    Apr_avg_workhours = work_duration.Apr,
-    May_avg_workhours = work_duration.May,
-    Jun_avg_workhours = work_duration.Jun,
-    Jul_avg_workhours = work_duration.Jul,
-    Aug_avg_workhours = work_duration.Aug,
-    Sep_avg_workhours = work_duration.Sep,
-    Oct_avg_workhours = work_duration.Oct,
-    Nov_avg_workhours = work_duration.Nov,
-    Dec_avg_workhours = work_duration.Dec
-  )
+
 
 employee_data <-
   merge(
@@ -181,7 +159,12 @@ employee_data <-
     all = F
   )
 rm(general_data) # clean the general data and release the memory
-employee_data_1 <- employee_data
+
+employee_data$EnvironmentSatisfaction[is.na(employee_data$EnvironmentSatisfaction)] <- 'unknown'
+employee_data$JobSatisfaction[is.na(employee_data$JobSatisfaction)] <- 'unknown'
+employee_data$WorkLifeBalance[is.na(employee_data$WorkLifeBalance)] <- 'unknown'
+employee_data$JobInvolvement[is.na(employee_data$JobInvolvement)] <- 'unknown'
+employee_data$PerformanceRating[is.na(employee_data$PerformanceRating)] <- 'unknown'
 
 employee_data$Attrition <- as.factor(employee_data$Attrition)
 employee_data$BusinessTravel <- as.factor(employee_data$BusinessTravel)
@@ -189,8 +172,8 @@ employee_data$Department <- as.factor(employee_data$Department)
 employee_data$Education <- as.factor(employee_data$Education)
 employee_data$EducationField <- as.factor(employee_data$EducationField)
 employee_data$Gender <- as.factor(employee_data$Gender)
-employee_data$JobLevel <- as.factor(employee_data$JobLevel)
 employee_data$JobRole <- as.factor(employee_data$JobRole)
+employee_data$JobLevel <- as.factor(employee_data$JobLevel)
 employee_data$MaritalStatus <- as.factor(employee_data$MaritalStatus)
 employee_data$Over18 <- as.factor(employee_data$Over18) # can remove
 employee_data$EnvironmentSatisfaction <- as.factor(employee_data$EnvironmentSatisfaction)
@@ -199,7 +182,6 @@ employee_data$WorkLifeBalance <- as.factor(employee_data$WorkLifeBalance)
 employee_data$JobInvolvement <- as.factor(employee_data$JobInvolvement)
 employee_data$PerformanceRating <- as.factor(employee_data$PerformanceRating)
 
-levels(employee_data$Department)
 dummy <- model.matrix( ~ BusinessTravel - 1, data = employee_data)
 dummy <- dummy[, -1]
 employee_data <- cbind(employee_data, dummy)
@@ -216,25 +198,546 @@ dummy <- model.matrix( ~ EducationField - 1, data = employee_data)
 dummy <- dummy[, -1]
 employee_data <- cbind(employee_data, dummy)
 
-
-dummy <- model.matrix( ~ JobLevel - 1, data = employee_data)
-dummy <- dummy[, -1]
-employee_data <- cbind(employee_data, dummy)
-
 dummy <- model.matrix( ~ JobRole - 1, data = employee_data)
 dummy <- dummy[, -1]
 employee_data <- cbind(employee_data, dummy)
-
 
 dummy <- model.matrix( ~ MaritalStatus - 1, data = employee_data)
 dummy <- dummy[, -1]
 employee_data <- cbind(employee_data, dummy)
 
-levels(employee_data$EnvironmentSatisfaction)
 dummy <- model.matrix( ~ EnvironmentSatisfaction - 1, data = employee_data)
 dummy <- dummy[, -1]
 employee_data <- cbind(employee_data, dummy)
 
-nrow(employee_data)
+dummy <- model.matrix( ~ JobSatisfaction - 1, data = employee_data)
+dummy <- dummy[, -1]
+employee_data <- cbind(employee_data, dummy)
+
+dummy <- model.matrix( ~ WorkLifeBalance - 1, data = employee_data)
+dummy <- dummy[, -1]
+employee_data <- cbind(employee_data, dummy)
+
+dummy <- model.matrix( ~ JobInvolvement - 1, data = employee_data)
+dummy <- dummy[, -1]
+employee_data <- cbind(employee_data, dummy)
+
+dummy <- model.matrix( ~ JobLevel - 1, data = employee_data)
+dummy <- dummy[, -1]
+employee_data <- cbind(employee_data, dummy)
+
+
+employee_data <- subset(
+  employee_data,
+  select = -c(
+    WorkLifeBalance,
+    BusinessTravel,
+    Department,
+    Education,
+    EducationField,
+    JobLevel,
+    JobRole,
+    MaritalStatus,
+    Over18,
+    EmployeeCount,
+    EnvironmentSatisfaction,
+    JobSatisfaction,
+    WorkLifeBalance,
+    JobInvolvement,
+    StandardHours,
+    EmployeeID
+  )
+)
+
+employee_data$Gender <- ifelse(employee_data$Gender == "Male",1,0)
+employee_data$Attrition <- ifelse(employee_data$Attrition == "Yes",1,0)
+employee_data$PerformanceRating <- ifelse(employee_data$PerformanceRating == 3,1,0)
+
+employee_data$Age       	<- scale(employee_data$Age)
+employee_data$DistanceFromHome       	<- scale(employee_data$DistanceFromHome)
+employee_data$MonthlyIncome          	<- scale(employee_data$MonthlyIncome)
+employee_data$NumCompaniesWorked     	<- scale(employee_data$NumCompaniesWorked)     
+employee_data$PercentSalaryHike      	<- scale(employee_data$PercentSalaryHike)    
+employee_data$StockOptionLevel       	<- scale(employee_data$StockOptionLevel)     
+employee_data$TotalWorkingYears      	<- scale(employee_data$TotalWorkingYears)
+employee_data$TrainingTimesLastYear  	<- scale(employee_data$TrainingTimesLastYear)  
+employee_data$YearsAtCompany         	<- scale(employee_data$YearsAtCompany)
+employee_data$YearsSinceLastPromotion	<- scale(employee_data$YearsSinceLastPromotion)
+employee_data$YearsWithCurrManager   	<- scale(employee_data$YearsWithCurrManager)  
+employee_data$work_duration      	<- scale(employee_data$work_duration)
+employee_data$Leaves                 	<- scale(employee_data$Leaves)               
+
 View(employee_data)
 str(employee_data)
+
+Attrition <- sum(employee_data$Attrition)/nrow(employee_data)
+Attrition
+
+## DATA MODELING
+set.seed(100)
+
+# Sample the Data
+trainindices = sample(1:nrow(employee_data), 0.7 * nrow(employee_data))
+
+# Traning Dataset
+train_employee_data <- employee_data[trainindices, ]
+
+# Test Dataset
+test_employee_data <- employee_data[-trainindices, ]
+
+model_1 <- glm(Attrition ~ . , data=train_employee_data, family="binomial")
+summary(model_1)
+
+### Step AIC Model
+stepModel <- stepAIC(model_1, direction = "both")
+summary(stepModel)
+
+model_3 <-
+  glm(
+    formula = Attrition ~ Age + MonthlyIncome + NumCompaniesWorked  + StockOptionLevel +
+      TotalWorkingYears + TrainingTimesLastYear + YearsAtCompany
+    + YearsSinceLastPromotion
+    + YearsWithCurrManager
+    + work_duration
+    + BusinessTravelTravel_Frequently
+    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`
+    + DepartmentSales
+    + Education5
+    + `EducationFieldLife Sciences`
+    + EducationFieldMarketing
+    + EducationFieldMedical
+    + EducationFieldOther
+    + `EducationFieldTechnical Degree`
+    + JobRoleManager
+    + `JobRoleManufacturing Director`
+    + `JobRoleResearch Director`
+    + `JobRoleSales Executive`
+    + MaritalStatusMarried
+    + MaritalStatusSingle
+    + EnvironmentSatisfaction2
+    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4
+    + JobSatisfaction2
+    + JobSatisfaction3
+    + JobSatisfaction4
+    + WorkLifeBalance2
+    + WorkLifeBalance3
+    + WorkLifeBalance4
+    + WorkLifeBalanceunknown
+    + JobInvolvement3
+    + JobLevel5 ,
+    family = "binomial",
+    data = train_employee_data
+  )
+summary(model_3)
+vif(model_3)
+
+model_4 <-
+  glm(
+    formula = Attrition ~ Age + MonthlyIncome + NumCompaniesWorked  + StockOptionLevel +
+      TotalWorkingYears + TrainingTimesLastYear + YearsAtCompany
+    + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`+ DepartmentSales  + Education5
+    + EducationFieldMarketing  + EducationFieldMedical    + EducationFieldOther
+    + `EducationFieldTechnical Degree`    + JobRoleManager    + `JobRoleManufacturing Director`
+    + `JobRoleResearch Director`    + `JobRoleSales Executive`    + MaritalStatusMarried
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4    + JobSatisfaction2    + JobSatisfaction3
+    + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
+    + WorkLifeBalance4    + WorkLifeBalanceunknown    + JobInvolvement3
+    + JobLevel5 ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_4)
+vif(model_4)
+
+model_5 <-
+  glm(
+    formula = Attrition ~ Age + MonthlyIncome + NumCompaniesWorked  + StockOptionLevel +
+      TotalWorkingYears + TrainingTimesLastYear + YearsAtCompany
+    + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`+ DepartmentSales  + Education5
+    + EducationFieldMedical    + EducationFieldOther
+    + `EducationFieldTechnical Degree`    + JobRoleManager    + `JobRoleManufacturing Director`
+    + `JobRoleResearch Director`    + `JobRoleSales Executive`    + MaritalStatusMarried
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4    + JobSatisfaction2    + JobSatisfaction3
+    + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
+    + WorkLifeBalance4    + WorkLifeBalanceunknown    + JobInvolvement3
+    + JobLevel5 ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_5)
+vif(model_5)
+
+model_6 <-
+  glm(
+    formula = Attrition ~ Age + MonthlyIncome + NumCompaniesWorked  + StockOptionLevel +
+      TotalWorkingYears + TrainingTimesLastYear + YearsAtCompany
+    + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`+ DepartmentSales  + Education5
+    + EducationFieldMedical + `EducationFieldTechnical Degree`    + JobRoleManager    + `JobRoleManufacturing Director`
+    + `JobRoleResearch Director`    + `JobRoleSales Executive`    + MaritalStatusMarried
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4    + JobSatisfaction2    + JobSatisfaction3
+    + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
+    + WorkLifeBalance4    + WorkLifeBalanceunknown    + JobInvolvement3
+    + JobLevel5 ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_6)
+vif(model_6)
+
+
+model_7 <-
+  glm(
+    formula = Attrition ~ Age + MonthlyIncome + NumCompaniesWorked  + StockOptionLevel +
+      TotalWorkingYears + TrainingTimesLastYear + YearsAtCompany
+    + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`+ DepartmentSales  + Education5
+    + `EducationFieldTechnical Degree`    + JobRoleManager    + `JobRoleManufacturing Director`
+    + `JobRoleResearch Director`    + `JobRoleSales Executive`    + MaritalStatusMarried
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4    + JobSatisfaction2    + JobSatisfaction3
+    + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
+    + WorkLifeBalance4    + WorkLifeBalanceunknown    + JobInvolvement3
+    + JobLevel5 ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_7)
+vif(model_7)
+
+model_8 <-
+  glm(
+    formula = Attrition ~ Age + MonthlyIncome + NumCompaniesWorked  + StockOptionLevel +
+      TotalWorkingYears + TrainingTimesLastYear + YearsAtCompany
+    + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`+ DepartmentSales  + Education5
+    + JobRoleManager    + `JobRoleManufacturing Director`
+    + `JobRoleResearch Director`    + `JobRoleSales Executive`    + MaritalStatusMarried
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4    + JobSatisfaction2    + JobSatisfaction3
+    + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
+    + WorkLifeBalance4    + WorkLifeBalanceunknown    + JobInvolvement3
+    + JobLevel5 ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_8)
+vif(model_8)
+
+
+model_9 <-
+  glm(
+    formula = Attrition ~ Age + MonthlyIncome + NumCompaniesWorked  + StockOptionLevel +
+      TotalWorkingYears + TrainingTimesLastYear + YearsAtCompany
+    + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`+ DepartmentSales  + Education5
+    + JobRoleManager    + `JobRoleManufacturing Director`
+    + `JobRoleSales Executive`    + MaritalStatusMarried
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4    + JobSatisfaction2    + JobSatisfaction3
+    + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
+    + WorkLifeBalance4    + WorkLifeBalanceunknown    + JobInvolvement3
+    + JobLevel5 ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_9)
+vif(model_9)
+
+
+model_10 <-
+  glm(
+    formula = Attrition ~ Age + MonthlyIncome + NumCompaniesWorked  + StockOptionLevel +
+      TotalWorkingYears + TrainingTimesLastYear + YearsAtCompany
+    + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`+ DepartmentSales  + Education5
+    + JobRoleManager    + `JobRoleManufacturing Director`
+    + `JobRoleSales Executive`    + MaritalStatusMarried
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4    + JobSatisfaction2    + JobSatisfaction3
+    + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
+    + WorkLifeBalance4    + JobInvolvement3
+    + JobLevel5 ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_10)
+vif(model_10)
+
+model_11 <-
+  glm(
+    formula = Attrition ~ Age + NumCompaniesWorked  + StockOptionLevel +
+      TotalWorkingYears + TrainingTimesLastYear + YearsAtCompany
+    + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`+ DepartmentSales  + Education5
+    + JobRoleManager    + `JobRoleManufacturing Director`
+    + `JobRoleSales Executive`    + MaritalStatusMarried
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4    + JobSatisfaction2    + JobSatisfaction3
+    + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
+    + WorkLifeBalance4    + JobInvolvement3
+    + JobLevel5 ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_11)
+vif(model_11)
+
+model_12 <-
+  glm(
+    formula = Attrition ~ Age + NumCompaniesWorked  + StockOptionLevel +
+      TotalWorkingYears + TrainingTimesLastYear + YearsAtCompany
+    + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`+ DepartmentSales  + Education5
+    + JobRoleManager    + `JobRoleManufacturing Director`
+    + MaritalStatusMarried
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4    + JobSatisfaction2    + JobSatisfaction3
+    + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
+    + WorkLifeBalance4    + JobInvolvement3
+     ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_12)
+vif(model_12)
+
+model_13 <-
+  glm(
+    formula = Attrition ~ Age + NumCompaniesWorked  + StockOptionLevel +
+      TotalWorkingYears + TrainingTimesLastYear + YearsAtCompany
+    + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`+ DepartmentSales  + Education5
+    + JobRoleManager    + `JobRoleManufacturing Director`
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4    + JobSatisfaction2    + JobSatisfaction3
+    + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
+    + WorkLifeBalance4    + JobInvolvement3
+    ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_13)
+vif(model_13)
+
+
+model_13 <-
+  glm(
+    formula = Attrition ~ Age + NumCompaniesWorked  + 
+      TotalWorkingYears + TrainingTimesLastYear + YearsAtCompany
+    + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`+ DepartmentSales  + Education5
+    + JobRoleManager    + `JobRoleManufacturing Director`
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4    + JobSatisfaction2    + JobSatisfaction3
+    + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
+    + WorkLifeBalance4    + JobInvolvement3
+    ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_13)
+vif(model_13)
+
+model_14 <-
+  glm(
+    formula = Attrition ~ Age + NumCompaniesWorked  + 
+      TotalWorkingYears + TrainingTimesLastYear + YearsAtCompany
+    + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`+ DepartmentSales 
+    + JobRoleManager    + `JobRoleManufacturing Director`
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4    + JobSatisfaction2    + JobSatisfaction3
+    + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
+    + WorkLifeBalance4    + JobInvolvement3
+    ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_14)
+vif(model_14)
+
+model_15 <-
+  glm(
+    formula = Attrition ~ Age + NumCompaniesWorked  + 
+      TotalWorkingYears + TrainingTimesLastYear + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`+ DepartmentSales 
+    + JobRoleManager    + `JobRoleManufacturing Director`
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4    + JobSatisfaction2    + JobSatisfaction3
+    + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
+    + WorkLifeBalance4    + JobInvolvement3
+    ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_15)
+vif(model_15)
+
+model_16 <-
+  glm(
+    formula = Attrition ~ Age + NumCompaniesWorked  + 
+      TotalWorkingYears + TrainingTimesLastYear + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`+ DepartmentSales 
+    + `JobRoleManufacturing Director`
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4    + JobSatisfaction2    + JobSatisfaction3
+    + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
+    + WorkLifeBalance4    + JobInvolvement3
+    ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_16)
+vif(model_16)
+
+model_17 <-
+  glm(
+    formula = Attrition ~ Age + NumCompaniesWorked  + 
+      TotalWorkingYears + TrainingTimesLastYear + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`+ DepartmentSales 
+    + `JobRoleManufacturing Director`
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4    + JobSatisfaction2    + JobSatisfaction3
+    + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
+    + WorkLifeBalance4,    family = "binomial",    data = train_employee_data
+  )
+summary(model_17)
+vif(model_17)
+
+model_18 <-
+  glm(
+    formula = Attrition ~ Age + NumCompaniesWorked  + 
+      TotalWorkingYears + TrainingTimesLastYear + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`+ DepartmentSales 
+    + `JobRoleManufacturing Director`
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4    + JobSatisfaction3
+    + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
+    + WorkLifeBalance4,    family = "binomial",    data = train_employee_data
+  )
+summary(model_18)
+vif(model_18)
+
+model_19 <-
+  glm(
+    formula = Attrition ~ Age + NumCompaniesWorked  + 
+      TotalWorkingYears + TrainingTimesLastYear + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`+ DepartmentSales 
+    + `JobRoleManufacturing Director`
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4  +
+    + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
+    + WorkLifeBalance4,    family = "binomial",    data = train_employee_data
+  )
+summary(model_19)
+vif(model_19)
+
+model_20 <-
+  glm(
+    formula = Attrition ~ Age + NumCompaniesWorked  + 
+      TotalWorkingYears + TrainingTimesLastYear + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`+ DepartmentSales 
+    + `JobRoleManufacturing Director`
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4  +
+      + JobSatisfaction4    + WorkLifeBalance3
+    ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_20)
+vif(model_20)
+
+model_21 <-
+  glm(
+    formula = Attrition ~ Age + NumCompaniesWorked  + 
+      TotalWorkingYears + TrainingTimesLastYear + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently    + BusinessTravelTravel_Rarely
+    + `DepartmentResearch & Development`+ DepartmentSales 
+    + `JobRoleManufacturing Director`
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4  +
+      + JobSatisfaction4
+    ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_21)
+vif(model_21)
+
+model_22 <-
+  glm(
+    formula = Attrition ~ Age + NumCompaniesWorked  + 
+      TotalWorkingYears + TrainingTimesLastYear + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently + `DepartmentResearch & Development`+ DepartmentSales 
+    + `JobRoleManufacturing Director`
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4  +
+      + JobSatisfaction4
+    ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_22)
+vif(model_22)
+
+model_23 <-
+  glm(
+    formula = Attrition ~ Age + NumCompaniesWorked  + 
+      TotalWorkingYears + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently + `DepartmentResearch & Development`+ DepartmentSales 
+    + `JobRoleManufacturing Director`
+    + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4  +
+      + JobSatisfaction4
+    ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_23)
+vif(model_23)
+
+model_24 <-
+  glm(
+    formula = Attrition ~ Age + NumCompaniesWorked  + 
+      TotalWorkingYears + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently + `DepartmentResearch & Development`+ DepartmentSales 
+    + `JobRoleManufacturing Director`
+    + MaritalStatusSingle    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4  +
+      + JobSatisfaction4
+    ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_24)
+vif(model_24)
+
+model_25 <-
+  glm(
+    formula = Attrition ~ NumCompaniesWorked  + 
+      TotalWorkingYears + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently + `DepartmentResearch & Development`+ DepartmentSales 
+    + `JobRoleManufacturing Director`
+    + MaritalStatusSingle    + EnvironmentSatisfaction3
+    + EnvironmentSatisfaction4  +
+      + JobSatisfaction4
+    ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_25)
+vif(model_25)
+
+model_26 <-
+  glm(
+    formula = Attrition ~ NumCompaniesWorked  + 
+      TotalWorkingYears + YearsSinceLastPromotion    + YearsWithCurrManager + work_duration    
+    + BusinessTravelTravel_Frequently + `DepartmentResearch & Development`+ DepartmentSales 
+    + `JobRoleManufacturing Director`
+    + MaritalStatusSingle    + EnvironmentSatisfaction4  +
+      + JobSatisfaction4
+    ,    family = "binomial",    data = train_employee_data
+  )
+summary(model_26)
+vif(model_26)
+
+
+
+test_employee_data <- employee_data[-trainindices, ]
+
+final_model <- model_26
+str(test_employee_data)
+test_predicted <- predict(final_model,type="response",newdata = test_employee_data[-2])
+test_employee_data$predicted_prob <- test_predicted
+test_predicted_Attrition <- factor(ifelse(test_employee_data$predicted_prob >= 0.40, "Yes", "No"))
+test_actual_Attrition <- factor(ifelse(test_employee_data$Attrition == 1, "Yes", "No"))
+table(test_actual_Attrition,test_predicted_Attrition)
+
+
