@@ -738,6 +738,14 @@ test_predicted <- predict(final_model,type="response",newdata = test_employee_da
 test_employee_data$predicted_prob <- test_predicted
 test_predicted_Attrition <- factor(ifelse(test_employee_data$predicted_prob >= 0.40, "Yes", "No"))
 test_actual_Attrition <- factor(ifelse(test_employee_data$Attrition == 1, "Yes", "No"))
-table(test_actual_Attrition,test_predicted_Attrition)
+attritionData <- table(test_actual_Attrition,test_predicted_Attrition)
+attritionData
+accuracy_value <- (attritionData[1] +attritionData[4])/nrow(test_employee_data)
+accuracy_value
 
+sensitivity_value <- (attritionData[4])/(attritionData[4] + attritionData[2])
+sensitivity_value
+
+specificity_value <- attritionData[1] / ( attritionData[1] + attritionData[3] )
+specificity_value
 
