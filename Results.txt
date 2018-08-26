@@ -1,0 +1,36 @@
+######################################## 
+#  Final Model Parameters              #
+########################################
+TotalWorkingYears
+YearsSinceLastPromotion
+YearsWithCurrManager
+work_duration    
+BusinessTravelTravel_Frequently
+DepartmentResearch & Development
+DepartmentSales 
+JobRoleManufacturing Director
+MaritalStatusSingle
+EnvironmentSatisfaction4
+JobSatisfaction4
+########################################
+# Confusion Matrix for 0.4 Probability #
+########################################
+						test_predicted_Attrition
+test_actual_Attrition	No  Yes
+						No  1036   73
+						Yes  136   70
+
+########################################
+# Accuracy                             #
+########################################
+0.8359788
+
+########################################
+#Sensitivity                           #
+########################################
+0.3398058
+
+########################################
+#Specificity	                       #
+########################################
+0.9341749

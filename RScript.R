@@ -1,10 +1,3 @@
-#install.packages("MASS")
-#install.packages("e1071")
-#install.packages("caret")
-#install.packages("cowplot")
-#install.packages("caTools")
-#install.packages("lubridate")
-
 ## LIBRARY
 library(car)
 library(ggplot2)
@@ -19,6 +12,7 @@ library(lubridate)
 
 ## user defined function
 
+#Function converts the date columns to date rows
 convert_empid_date_time <- function(df) {
   melted_df <- melt(df, id.vars = c("X"))
   melted_df <-
@@ -32,6 +26,7 @@ convert_empid_date_time <- function(df) {
   return(melted_df)
 }
 
+#Function checks if the IN Time is NA and returns 1 if its NA otherwise Returns 0
 is_emp_leave <- function(in_time) {
   if (is.na(in_time)) {
     return(1)
@@ -62,17 +57,16 @@ in_time <-
 out_time <-
   out_time[, colSums(is.na(out_time)) < nrow(out_time)] # remove all the columns with only NA values
 
-#Using the in time and out time and deriving variables "Average Working Hours of the Employee"
+#Using the in time and out time and deriving variables "Average Work Duration of the Employee"
 #Assumption :
 #if an employee IN Time is NA considering them as Leave.
-ncol(in_time) == ncol(out_time)
-nrow(in_time) == nrow(out_time)
 in_time <- convert_empid_date_time(in_time)
 out_time <- convert_empid_date_time(out_time)
 
 in_time <- rename(in_time, IN_Time = Time)
 out_time <- rename(out_time, OUT_Time = Time)
 
+#Create a Temporary Data Frame by Merging the IN and OUT times data set into a single dataSet
 emp_in_out_times_df <-
   merge(
     x = in_time,
@@ -82,14 +76,16 @@ emp_in_out_times_df <-
   )
 rm(in_time, out_time) # remove the IN and OUT Times data set and clean the memory
 
-sum(is.na(emp_in_out_times_df$IN_Time)) == sum(is.na(emp_in_out_times_df$OUT_Time))
+#Using sapply and adding a column Leaves
 emp_in_out_times_df$Leaves <-
   sapply(emp_in_out_times_df$IN_Time , is_emp_leave)
 
+#Create a Data Frame with EmployeeID and Number of Annual Leaves
 emp_annual_leaves <- aggregate(Leaves ~ EmployeeID,
                                data = emp_in_out_times_df,
                                sum)
 
+#Removes rows in which IN Time is NA
 emp_in_out_times_df <-
   emp_in_out_times_df[-which(is.na(emp_in_out_times_df$IN_Time)), ]
 
@@ -97,6 +93,8 @@ emp_in_out_times_df$IN_Time = as.POSIXlt(emp_in_out_times_df$IN_Time, format =
                                            "%Y-%m-%d %H:%M:%S")
 emp_in_out_times_df$OUT_Time = as.POSIXlt(emp_in_out_times_df$OUT_Time, format =
                                             "%Y-%m-%d %H:%M:%S")
+
+#Create a Temporary Data Frame with EmployeeID and Difference of IN Time & OUT Times
 emp_in_out_times_df$work_duration <-
   as.numeric(
     difftime(
@@ -106,29 +104,29 @@ emp_in_out_times_df$work_duration <-
     )
   )
 
-
-monthly_emp_average_workhour <-
+#Create a Temporary Data Frame with EmployeeID and Work Duration
+annual_emp_avg_workduration <-
   aggregate(work_duration ~ EmployeeID,
             data = emp_in_out_times_df,
             mean)
 rm(emp_in_out_times_df)  # removing the temporarily created data
 
-View(monthly_emp_average_workhour)
-monthly_emp_average_workhour$work_duration <-
-  signif(monthly_emp_average_workhour$work_duration, digits = 2)
+annual_emp_avg_workduration$work_duration <-
+  signif(annual_emp_avg_workduration$work_duration, digits = 2) # Round off the average work duration to 2 Digits
 
 
+#Create the Employee Data Frame with the Employee ID, Average work duration and Annual Leaves
 employee_data <-
   merge(
-    x = monthly_emp_average_workhour,
+    x = annual_emp_avg_workduration,
     y = emp_annual_leaves,
     by = c("EmployeeID"),
     all = F
   )
-rm(monthly_emp_average_workhour, emp_annual_leaves) # clean the in and out times data and release the memory
+rm(annual_emp_avg_workduration, emp_annual_leaves) # clean Temporary Data frames created.
 
-length(unique(employee_data$EmployeeID)) == length(unique(employee_survey_data$EmployeeID))
-setdiff(employee_data$EmployeeID, employee_survey_data$EmployeeID)
+length(unique(employee_data$EmployeeID)) == length(unique(employee_survey_data$EmployeeID))#Prechecks for merging the survey data to employee_data
+setdiff(employee_data$EmployeeID, employee_survey_data$EmployeeID)#Prechecks for merging the survey data to employee_data
 employee_data <-
   merge(
     x = employee_data,
@@ -160,12 +158,14 @@ employee_data <-
   )
 rm(general_data) # clean the general data and release the memory
 
+#Handle the NAs with the value 'unknown'
 employee_data$EnvironmentSatisfaction[is.na(employee_data$EnvironmentSatisfaction)] <- 'unknown'
 employee_data$JobSatisfaction[is.na(employee_data$JobSatisfaction)] <- 'unknown'
 employee_data$WorkLifeBalance[is.na(employee_data$WorkLifeBalance)] <- 'unknown'
 employee_data$JobInvolvement[is.na(employee_data$JobInvolvement)] <- 'unknown'
 employee_data$PerformanceRating[is.na(employee_data$PerformanceRating)] <- 'unknown'
 
+#Factor the categorical Variables
 employee_data$Attrition <- as.factor(employee_data$Attrition)
 employee_data$BusinessTravel <- as.factor(employee_data$BusinessTravel)
 employee_data$Department <- as.factor(employee_data$Department)
@@ -182,51 +182,62 @@ employee_data$WorkLifeBalance <- as.factor(employee_data$WorkLifeBalance)
 employee_data$JobInvolvement <- as.factor(employee_data$JobInvolvement)
 employee_data$PerformanceRating <- as.factor(employee_data$PerformanceRating)
 
+#Creating dummies for BusinessTravel
 dummy <- model.matrix( ~ BusinessTravel - 1, data = employee_data)
 dummy <- dummy[, -1]
 employee_data <- cbind(employee_data, dummy)
 
+#Creating dummies for Department
 dummy <- model.matrix( ~ Department - 1, data = employee_data)
 dummy <- dummy[, -1]
 employee_data <- cbind(employee_data, dummy)
 
+#Creating dummies for Education
 dummy <- model.matrix( ~ Education - 1, data = employee_data)
 dummy <- dummy[, -1]
 employee_data <- cbind(employee_data, dummy)
 
+#Creating dummies for EducationField
 dummy <- model.matrix( ~ EducationField - 1, data = employee_data)
 dummy <- dummy[, -1]
 employee_data <- cbind(employee_data, dummy)
 
+#Creating dummies for JobRole
 dummy <- model.matrix( ~ JobRole - 1, data = employee_data)
 dummy <- dummy[, -1]
 employee_data <- cbind(employee_data, dummy)
 
+#Creating dummies for MaritalStatus
 dummy <- model.matrix( ~ MaritalStatus - 1, data = employee_data)
 dummy <- dummy[, -1]
 employee_data <- cbind(employee_data, dummy)
 
+#Creating dummies for EnvironmentSatisfaction
 dummy <- model.matrix( ~ EnvironmentSatisfaction - 1, data = employee_data)
 dummy <- dummy[, -1]
 employee_data <- cbind(employee_data, dummy)
 
+#Creating dummies for JobSatisfaction
 dummy <- model.matrix( ~ JobSatisfaction - 1, data = employee_data)
 dummy <- dummy[, -1]
 employee_data <- cbind(employee_data, dummy)
 
+#Creating dummies for WorkLifeBalance
 dummy <- model.matrix( ~ WorkLifeBalance - 1, data = employee_data)
 dummy <- dummy[, -1]
 employee_data <- cbind(employee_data, dummy)
 
+#Creating dummies for JobInvolvement
 dummy <- model.matrix( ~ JobInvolvement - 1, data = employee_data)
 dummy <- dummy[, -1]
 employee_data <- cbind(employee_data, dummy)
 
+#Creating dummies for JobLevel
 dummy <- model.matrix( ~ JobLevel - 1, data = employee_data)
 dummy <- dummy[, -1]
 employee_data <- cbind(employee_data, dummy)
 
-
+#Remove the categorical variables as dummies are created for each of them.
 employee_data <- subset(
   employee_data,
   select = -c(
@@ -249,10 +260,14 @@ employee_data <- subset(
   )
 )
 
+#Convert the Gender to 1s and 0s
 employee_data$Gender <- ifelse(employee_data$Gender == "Male",1,0)
+#Convert the Attrition to 1s and 0s
 employee_data$Attrition <- ifelse(employee_data$Attrition == "Yes",1,0)
+#Convert the PerformanceRating to 1s and 0s
 employee_data$PerformanceRating <- ifelse(employee_data$PerformanceRating == 3,1,0)
 
+#Scale the continous variables
 employee_data$Age       	<- scale(employee_data$Age)
 employee_data$DistanceFromHome       	<- scale(employee_data$DistanceFromHome)
 employee_data$MonthlyIncome          	<- scale(employee_data$MonthlyIncome)
@@ -267,8 +282,8 @@ employee_data$YearsWithCurrManager   	<- scale(employee_data$YearsWithCurrManage
 employee_data$work_duration      	<- scale(employee_data$work_duration)
 employee_data$Leaves                 	<- scale(employee_data$Leaves)               
 
-View(employee_data)
-str(employee_data)
+#Write the cleaned data to a csv file.
+write.csv(employee_data, file="employee_data.csv")
 
 Attrition <- sum(employee_data$Attrition)/nrow(employee_data)
 Attrition
@@ -288,7 +303,7 @@ test_employee_data <- employee_data[-trainindices, ]
 model_1 <- glm(Attrition ~ . , data=train_employee_data, family="binomial")
 summary(model_1)
 
-### Step AIC Model
+#Step AIC Model
 stepModel <- stepAIC(model_1, direction = "both")
 summary(stepModel)
 
@@ -495,7 +510,7 @@ model_12 <-
     + EnvironmentSatisfaction4    + JobSatisfaction2    + JobSatisfaction3
     + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
     + WorkLifeBalance4    + JobInvolvement3
-     ,    family = "binomial",    data = train_employee_data
+    ,    family = "binomial",    data = train_employee_data
   )
 summary(model_12)
 vif(model_12)
@@ -623,7 +638,7 @@ model_19 <-
     + `JobRoleManufacturing Director`
     + MaritalStatusSingle    + EnvironmentSatisfaction2    + EnvironmentSatisfaction3
     + EnvironmentSatisfaction4  +
-    + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
+      + JobSatisfaction4    + WorkLifeBalance2    + WorkLifeBalance3
     + WorkLifeBalance4,    family = "binomial",    data = train_employee_data
   )
 summary(model_19)
@@ -728,24 +743,31 @@ model_26 <-
 summary(model_26)
 vif(model_26)
 
-
-
-test_employee_data <- employee_data[-trainindices, ]
-
+# Final Model
 final_model <- model_26
-str(test_employee_data)
+
+## Evaluating the Model
+#Predict the Model
 test_predicted <- predict(final_model,type="response",newdata = test_employee_data[-2])
 test_employee_data$predicted_prob <- test_predicted
+
+#Comparing the Predicted and Actual Attrition of the Model
 test_predicted_Attrition <- factor(ifelse(test_employee_data$predicted_prob >= 0.40, "Yes", "No"))
 test_actual_Attrition <- factor(ifelse(test_employee_data$Attrition == 1, "Yes", "No"))
 attritionData <- table(test_actual_Attrition,test_predicted_Attrition)
 attritionData
+
+#						test_predicted_Attrition
+#test_actual_Attrition	No  Yes
+#						No  1036   73
+#						Yes  136   70
+
 accuracy_value <- (attritionData[1] +attritionData[4])/nrow(test_employee_data)
-accuracy_value
+accuracy_value #0.8359788
 
 sensitivity_value <- (attritionData[4])/(attritionData[4] + attritionData[2])
-sensitivity_value
+sensitivity_value #0.3398058
 
 specificity_value <- attritionData[1] / ( attritionData[1] + attritionData[3] )
-specificity_value
+specificity_value #0.9341749
 
